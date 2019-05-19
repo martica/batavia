@@ -54,24 +54,29 @@ def setUpSuite():
     if _suite_configured:
         return
 
-    _suite_output_dir = create_output_dir()
+    should_launch_js_harness = os.environ.get('USE_NODE_SERVER', 'false').lower() == 'true'
+
+    if should_launch_js_harness:
+        _suite_output_dir = create_output_dir()
     _output_dir = create_output_dir()
 
     precompile = os.environ.get('PRECOMPILE', 'true').lower() == 'true'
 
-    if precompile:
+    if precompile and should_launch_js_harness:
         _batavia_js_dir = _suite_output_dir
     else:
         _batavia_js_dir = os.path.join(BATAVIA_DIR, 'dist')
 
-    launch_js_harness(_output_dir)
+    if should_launch_js_harness:
+        launch_js_harness(_output_dir)
 
     if precompile:
         build_batavia_js()
     else:
         print("Not precompiling 'batavia.js' as part of test run")
 
-    _js_harness_port = read_js_harness_port(_output_dir)
+    if should_launch_js_harness:
+        _js_harness_port = read_js_harness_port(_output_dir)
 
     _suite_configured = True
 
@@ -781,20 +786,36 @@ class TranspileTestCase(TestCase):
         # print("JS CODE:")
         # print(js_code)
 
-        server = http.client.HTTPConnection('localhost:' + _js_harness_port)
-        server.request(
-            'POST',
-            '/',
-            body=json.dumps({'code': js_code}),
-            headers={'Content-type': 'application/json'},
-        )
-        out = server.getresponse().read()
-        server.close()
+        if _js_harness_port:
+            print('calling server')
+            server = http.client.HTTPConnection('localhost:' + _js_harness_port)
+            server.request(
+                'POST',
+                '/',
+                body=json.dumps({'code': js_code}),
+                headers={'Content-type': 'application/json'},
+            )
+            out = server.getresponse().read()
+            server.close()
+            output = out.decode('utf8')
+        else:
+            print('spawning process')
+            with open(os.path.join(self.temp_dir, 'test.js'), 'w') as js_file:
+                js_file.write(js_code)
+
+            proc = subprocess.Popen(
+                ['node', 'test.js'] + args,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            out = proc.communicate()
+            output = out[0].decode('utf8')
 
         # Move back to the old current working directory.
         os.chdir(cwd)
 
-        return out.decode('utf8')
+        return output
 
 
 class NotImplementedToExpectedFailure:
