@@ -15,6 +15,11 @@ function Map(args, kwargs) {
     if (args.length < 2) {
         throw new exceptions.TypeError.$pyclass('map expected 2 arguments, got ' + args.length)
     }
+
+    if (!(args[1].__next__ || args[1].__iter__)) {
+        throw new exceptions.TypeError.$pyclass('\'' + type_name(args[1]) + '\' object is not iterable')
+    }
+
     this._func = args[0]
     this._sequence = args[1]
 }

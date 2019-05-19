@@ -975,6 +975,21 @@ SAMPLE_DATA = {
             '((1, 2), (3, 4))',
             '((3, 4), (1, 2))'
         ],
+    'type': [
+            'bool',
+            'bytearray',
+            'bytes',
+            'complex',
+            'dict',
+            'filter',
+            'float',
+            'frozenset',
+            'int',
+            'list',
+            'map',
+            'range',
+            'set',
+        ],
     'None': [
             'None',
         ],
